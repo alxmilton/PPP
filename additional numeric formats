@@ -1,0 +1,21 @@
+
+
+proc format;
+
+value PARAMTYPN
+-2 = 'Not Reported'
+-1 = 'Not Available'
+1 = 'Individual'
+2 = 'Part of a sum'
+3 = 'Sum'
+4 = 'Sum based on subset'
+5 = 'Full legal residue definition analysed'
+;
+run;
+
+
+proc format;
+
+value ANLYMDN 
+-1 = 'Not Available';
+run;
