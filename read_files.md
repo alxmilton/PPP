@@ -1,0 +1,34 @@
+# PPP
+
+
+%macro read_files (catlib); 
+
+%let rc=%sysfunc(filename(rawdata,&catlib)); 
+%let did=%sysfunc(dopen(&rawdata)); /*DOPEN opens a directory and returns a directory identifier value (a number greater than 0) that is used to identify the open directory in other SAS external file access functions*/
+
+%let dnum=%sysfunc(dnum(&did)); /*DNUM is a numeric variable that specifies the identifier that was assigned when the directory was opened by the DOPEN function */
+
+%do i=1 %to &dnum; 
+	%let name_file=%sysfunc(dread(&did,&i)); 
+	
+	%let suffix=%sysfunc(scan(&name_file,2,.)); /* scan the second word in file name, divided by . */
+
+	%if &suffix=xlsx %then %do; /* if second word - suffix is equal to xlsx then */
+		%let name_file_short=%sysfunc(scan(&name_file,1,.)); /* .. short name takes the first, removing suffix */
+		
+			PROC IMPORT OUT=WORK.&name_file_short 
+			DATAFILE="&catlib\&name_file" DBMS=xlsx  REPLACE; sheet="term";
+			RUN;
+
+			data WORK.&name_file_short;
+			set WORK.&name_file_short;
+			termcode = compress(termcode,'qwertyuiopasdfghjklzxcvbnm1234567890-', "ki");
+			run;
+
+
+	%end;
+
+%end;
+%mend;
+
+%read_files(\\efsa.eu.int\Fileserver\SASOperational\DataShare\AdHocProjects\2013\Personal Projects\CARLETTI\test);
