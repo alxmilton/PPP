@@ -1,0 +1,19 @@
+
+%macro formatsFromXLSX (libname=, tablename=, idname=, codename=, formatname=);
+
+data work.&tablename (compress=yes);
+set &libname..&tablename (keep= &idname &codename);
+fmtname = &formatname;
+rename &codename = start &idname  = label;
+run;
+
+proc sort data=work.&tablename nodupkey;
+by start;
+run;
+
+proc format cntlin= work.&tablename;
+run;
+
+%mend formatsFromXLSX;
+
+%formatsFromXLSX (libname=work, tablename=lang1, idname=termextendedname, codename=termcode, formatname= '$LANGone' );
