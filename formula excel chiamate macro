@@ -1,0 +1,4 @@
+%formatsFromXLSX (libname=work,tablename=ACTION, idname = termextendedname, codename = termcode, formatname = '$ACTIONN');
+
+# creato dalla seguente formula xls:
+=CONCATENATE("%formatsFromXLSX (libname=work,","tablename=",G17,", idname = termextendedname, codename = termcode, formatname = ", "'$",G17,"N');")
