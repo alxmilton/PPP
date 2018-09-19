@@ -1,0 +1,421 @@
+LIBNAME test "\\efsa.eu.int\Fileserver\SASOperational\DataShare\AdHocProjects\2013\Personal Projects\CARLETTI\test";
+
+
+proc sql;
+create table prova_formati_1
+as
+select *
+from test.prova_formati_1;
+quit;
+
+PROC SQL;
+   CREATE TABLE WORK.distinct_terms AS 
+   SELECT DISTINCT t1.SAMPAREA, 
+          t1.ORIGFISHAREATEXT, 
+          t1.PROCAREA, 
+          t1.EFSAPRODCODE, 
+          t1.PRODPRODMETH, 
+          t1.PRODPACK, 
+          t1.PRODTREAT, 
+          t1.PRODBRANDNAME, 
+          t1.PRODMANUF, 
+          t1.PRODINGRED, 
+          t1.PRODCOM, 
+          t1.PROGCODE, 
+          t1.PROGLEGALREF, 
+          t1.PROGSAMPSTRATEGY, 
+          t1.PROGTYPE, 
+          t1.SAMPMETHOD, 
+          t1.SAMPPOINT, 
+          t1.ANMETHREFCODE, 
+          t1.ANMETHCODE, 
+          t1.ANMETHTEXT, 
+          t1.RESVALREC, 
+          t1.RESVALUNCERTSD, 
+          t1.RESVALUNCERT, 
+          t1.MOISTPERC, 
+          t1.FATPERC, 
+          t1.RESCOMM, 
+          t1.ACTTAKENCODE, 
+          t1.LANG, 
+          t1.LABACCRED, 
+          t1.ACCREDPROC, 
+          t1.RESUNIT, 
+          t1.RESVALRECCORR, 
+          t1.EXPRRES, 
+          t1.RESTYPE, 
+          t1.RESLEGALLIMITTYPE, 
+          t1.RESEVALUATION
+      FROM WORK.MOPER_ALL_DATA_2016_EE t1;
+QUIT;
+
+data countryEU;
+set country;
+format EU $10.;
+if memberofEU = 1 then do;
+EU = 'EU';
+end;
+else do;
+EU = 'Non EU';
+end;
+run;
+
+
+
+proc contents data=distinct_terms; run;
+
+
+/* creazione dei formati */
+
+%macro formatsFromXLSX (libname=, tablename=, idname=, codename=, formatname=);
+
+data work.&tablename (compress=yes);
+set &libname..&tablename (keep= &idname &codename);
+fmtname = &formatname;
+rename &codename = start &idname  = label;
+run;
+
+proc sort data=work.&tablename nodupkey;
+by start;
+run;
+
+proc format cntlin= work.&tablename;
+run;
+
+%mend formatsFromXLSX;
+
+
+%formatsFromXLSX (libname=work,tablename=ACTION, idname = termextendedname, codename = termcode, formatname = '$ACTIONN');
+%formatsFromXLSX (libname=work,tablename=ANLYMD, idname = termextendedname, codename = termcode, formatname = '$ANLYMDN');
+%formatsFromXLSX (libname=work,tablename=EXPRRES, idname = termextendedname, codename = termcode, formatname = '$EXPRRESN');
+%formatsFromXLSX (libname=work,tablename=FOODEX, idname = termextendedname, codename = termcode, formatname = '$FOODEXN');
+%formatsFromXLSX (libname=work,tablename=LABACC, idname = termextendedname, codename = termcode, formatname = '$LABACCN');
+%formatsFromXLSX (libname=work,tablename=LANG, idname = termextendedname, codename = termcode, formatname = '$LANGN');
+%formatsFromXLSX (libname=work,tablename=LMTTYP, idname = termextendedname, codename = termcode, formatname = '$LMTTYPN');
+%formatsFromXLSX (libname=work,tablename=MDACC, idname = termextendedname, codename = termcode, formatname = '$MDACCN');
+%formatsFromXLSX (libname=work,tablename=NUTS, idname = termextendedname, codename = termcode, formatname = '$NUTSN');
+%formatsFromXLSX (libname=work,tablename=PRODMD, idname = termextendedname, codename = termcode, formatname = '$PRODMDN');
+%formatsFromXLSX (libname=work,tablename=PRODPAC, idname = termextendedname, codename = termcode, formatname = '$PRODPACN');
+%formatsFromXLSX (libname=work,tablename=PRODTR, idname = termextendedname, codename = termcode, formatname = '$PRODTRN');
+%formatsFromXLSX (libname=work,tablename=RESEVAL, idname = termextendedname, codename = termcode, formatname = '$RESEVALN');
+%formatsFromXLSX (libname=work,tablename=SAMPMD, idname = termextendedname, codename = termcode, formatname = '$SAMPMDN');
+%formatsFromXLSX (libname=work,tablename=SAMPSTR, idname = termextendedname, codename = termcode, formatname = '$SAMPSTRN');
+%formatsFromXLSX (libname=work,tablename=SAMPNT, idname = termextendedname, codename = termcode, formatname = '$SMPNTN');
+%formatsFromXLSX (libname=work,tablename=PRGTYP, idname = termextendedname, codename = termcode, formatname = '$PRGTYPN');
+%formatsFromXLSX (libname=work,tablename=UNIT, idname = termextendedname, codename = termcode, formatname = '$UNITN');
+%formatsFromXLSX (libname=work,tablename=VALTYP, idname = termextendedname, codename = termcode, formatname = '$VALTYPN');
+%formatsFromXLSX (libname=work,tablename=YESNO, idname = termextendedname, codename = termcode, formatname = '$YESNON');
+%formatsFromXLSX (libname=work,tablename=PARAM, idname = termextendedname, codename = termcode, formatname = '$PARAMN');
+%formatsFromXLSX (libname=work,tablename=MATRIX, idname = termextendedname, codename = termcode, formatname = '$MATRIXN');
+%formatsFromXLSX (libname=work,tablename=COUNTRY, idname = termextendedname, codename = termcode, formatname = '$COUNTRYN');
+%formatsFromXLSX (libname=work,tablename=LEGREF, idname = termextendedname, codename = termcode, formatname = '$LEGREFN');
+
+%formatsFromXLSX (libname=work,tablename=COUNTRYEU, idname = eu, codename = termcode, formatname = '$EUN');
+
+
+
+
+
+proc format;
+
+value PARAMTYPN
+-2 = 'Not Reported'
+-1 = 'Not Available'
+1 = 'Individual'
+2 = 'Part of a sum'
+3 = 'Sum'
+4 = 'Sum based on subset'
+5 = 'Full legal residue definition analysed'
+;
+run;
+
+
+proc format;
+
+value ANLYMDN 
+-1 = 'Not Available';
+run;
+/*
+data MOPER_ALL_DATA_2016_EE;
+set MOPER_ALL_DATA_2016_EE;
+lang = lowcase(lang);
+run;
+*/
+
+
+data prova_formati_2;
+set prova_formati_1;
+format paramcode $PARAMN.;
+format lang $LANGN.;
+format sampcountry $COUNTRYN.;
+format origcountry $COUNTRYN.;
+format prodcode $MATRIXN.;
+format prodprodmeth $PRODMDN.;
+format prodtreat $PRODTRN.;
+format progsampstrategy $SAMPSTRN.;
+format progtype $PRGTYPN.;
+format sampmethod $SAMPMDN.;
+format samppoint $SMPNTN.;
+format labaccred $LABACCN.;
+format resunit $UNITN.;
+format restype $VALTYPN.;
+format resevaluation $RESEVALN.;
+format paramtype PARAMTYPN.;
+format anmethcode ANLYMDN.;
+format reslegallimittype $LMTTYPN.;
+format acttakencode $ACTIONN.;
+format proglegalref $LEGREFN.;
+
+run;
+
+
+
+
+/* Preparazione dei report  e analisi dei dati */
+
+data prova_formati_3;
+set prova_formati_2;
+format score $30.;
+if restype ^= "LOD" then do;
+detected = 1;
+end;
+else do detected = 0;
+end;
+
+if resval<resloq then do;
+belowLOQ = 1;
+score = "below LOQ";
+end;
+else do belowLOQ = 0;
+end;
+
+
+if resval > reslegallimit then do;
+aboveMRL = 1;
+score = "above MRL";
+end;
+else do aboveMRL = 0;
+end;
+
+if resloq<=resval<=reslegallimit then do;
+BetweenLOQandMRL = 1;
+score = "between LOQ and MRL";
+end;
+else do BetweenLOQandMRL = 0;
+end;
+
+
+if resval > resloq and restype ^="VAL" then do;
+check = 1;
+end;
+if resval < resloq and restype ^="LOQ" then do;
+check = 2;
+end;
+if resval > reslegallimit and resevaluation ^= "J003A" then do;
+check = 3;
+end;
+
+format origcountry2 $EUN.;
+origcountry2 = origcountry;
+
+run;
+
+proc sql;
+create table prova_formati_4
+as select t1.*, t2.masterparentcode format $matrixN. as Matrix_L2
+from prova_formati_3 as t1 left join matrix1 as t2 on (t1.prodcode = t2.termcode);
+quit;
+
+proc sql;
+create table prova_formati_5
+as select t1.*, t2.masterparentcode format $matrixN. as Matrix_L1
+from prova_formati_4 as t1 left join matrix1 as t2 on (t1.Matrix_L2 = t2.termcode);
+quit;
+
+
+data prova_formati_6;
+set prova_formati_5;
+if Matrix_L1 = "root" then do;
+
+Matrix_L1=Matrix_L2;
+end;
+run;
+
+
+
+
+/***************************************************************************
+proc report data=prova_formati_3;
+column paramcode prodcode   resloq, mean ;
+define paramcode/across;
+define prodcode/group;
+define resloq/analysis;
+run;*/
+
+
+
+ods html  options(pagebreak='no');
+
+
+proc format;
+ value cback
+low - 0.1 = ''
+ 0.1 < - 0.2 = 'yellow'
+ 0.2 - high = 'red';
+ run;
+
+proc report data=prova_formati_3;
+column   prodcode  origcountry resval reslegallimit;
+
+define prodcode/group;
+define origcountry/group;
+
+define resval/analysis mean format=6.4 /*style= {background=cback.}*/;
+define reslegallimit/analysis mean format=6.4;
+run;
+
+
+ ods listing close;
+ ods html style=default;
+
+
+
+proc format;
+ value MRL
+0 = 'below MRL'
+1 = 'above MRL'
+;
+run;
+
+proc report data=prova_formati_3;
+column prodcode paramcode aboveMRL betweenLOQandMRL belowLOQ;
+define prodcode/group;
+define paramcode/group;
+define aboveMRL/across format=MRL. /*style= {background=cback.}*/;
+define betweenLOQandMRL/across  /*style= {background=cback.}*/;
+define belowLOQ/across  /*style= {background=cback.}*/;
+
+break after prodcode/ summarize;
+rbreak after / summarize;
+where restype = "VAL";
+run;
+
+
+/* 01 _____ n samples EU/non EU */
+
+proc report data=prova_formati_3;
+column  origcountry origcountry2   ;
+define origcountry/group;
+define origcountry2/"N_samples" across;
+define n/"n_samples" format=10.;
+
+rbreak after / summarize;
+;
+
+/*
+where restype = "VAL";*/
+run;
+
+/* 02 _____ n samples by food groups */
+proc report data=prova_formati_6;
+column  Matrix_L1 Matrix_L2 prodcode progtype n ;
+define progtype/across;
+define Matrix_L1/group;
+define Matrix_L2/group;
+define prodcode/group;
+define n/"n_samples" format=10.;
+rbreak after / summarize;
+;
+
+/*
+where restype = "VAL";*/
+run;
+
+
+PROC SQL;
+	CREATE VIEW WORK.SORTTempTableSorted AS
+		SELECT T.Matrix_L1
+	FROM WORK.PROVA_FORMATI_6 as T
+;
+QUIT;
+
+PROC GCHART DATA=WORK.SORTTempTableSorted
+;
+HBAR
+	 Matrix_L1
+ /
+	CLIPREF
+FRAME	NOSTATS
+	DISCRETE
+	TYPE=FREQ
+	DESCENDING
+	COUTLINE=BLACK
+	MAXIS=AXIS1
+	RAXIS=AXIS2
+;
+
+RUN; 
+QUIT;
+
+
+
+/* 03 _____ residue concentration as % of MRL */
+
+proc report data=prova_formati_6;
+column    paramcode prodcode resval reslegallimit ratio;
+define paramcode/display "Residue" ;
+define resval/display "Residue/ concentration" ;
+define prodcode/display "Food group" ;
+
+define reslegallimit/display "MRL" format=10.2;
+define ratio/computed "Percentage of measured/ concentration on MRL" format=percent10.2;
+define paramcode/order;
+compute ratio;
+ratio = resval/reslegallimit;
+endcomp;
+where score ^="below LOQ";
+;
+
+run;
+
+/* 04 _____  */
+
+/* prepare summary table */
+
+proc sql;
+create table summary
+as
+select distinct paramcode,
+prodcode,
+sum(detected) format 10.2 as DET ,
+sum(belowLOQ) format 10.2 as ltLOQ,
+sum(betweenLOQandMRL) format 10.2 as btwLOQMRL,
+sum(aboveMRL) format 10.2 as gtMRL
+from prova_formati_6
+group by paramcode, prodcode;
+quit;
+
+data summary_2;
+set summary;
+Format Det_rate percent10.2;
+Format EX_Rate percent10.2;
+
+Det_rate = DET/sum(ltLOQ,btwLOQMRL,gtMRL);
+EX_Rate = gtMRL/DET;
+
+run;
+
+proc report data=prova_formati_6;
+column    paramcode prodcode detected belowLOQ betweenLOQandMRL aboveMRL Det_Rate;
+define paramcode/display "Residue" ;
+define prodcode/display "Food group" ;
+
+define detected/analysis sum ;
+define belowLOQ/analysis sum ;
+define betweenLOQandMRL/analysis sum ;
+define aboveMRL/analysis sum ;
+define Det_Rate/computed format=percent10.2;
+compute Det_Rate;
+Det_Rate = detected/sum(belowLOQ,betweenLOQandMRS,aboveMRL)*100;
+endcomp;
+run;
