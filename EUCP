@@ -1,0 +1,32 @@
+
+DATA WORK.EUCP_samples;
+    LENGTH
+        Matrix_code      $ 9
+        Matrix           $ 13 ;
+    FORMAT
+        Matrix_code      $CHAR9.
+        Matrix           $CHAR13. ;
+    INFORMAT
+        Matrix_code      $CHAR9.
+        Matrix           $CHAR13. ;
+    INFILE DATALINES4
+        DLM='7F'x
+        MISSOVER
+        DSD ;
+    INPUT
+        Matrix_code      : $CHAR9.
+        Matrix           : $CHAR13. ;
+DATALINES4;
+P0130010AApples
+P0140030APeaches
+P0151020AWine grapes
+P0152000AStrawberries
+P0231010ATomatoes
+P0242020AHead cabbages
+P0251020ALettuces
+P0270060ALeeks
+P0500070ARye
+P1011020AFat (swine)
+P1020010AMilk (cattle)
+;;;;
+
