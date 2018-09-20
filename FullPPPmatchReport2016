@@ -1,12 +1,12 @@
 LIBNAME test "\\efsa.eu.int\Fileserver\SASOperational\DataShare\AdHocProjects\2013\Personal Projects\CARLETTI\test";
 
-
+/*
 proc sql;
 create table prova_formati_1
 as
 select *
 from test.prova_formati_1;
-quit;
+quit;*/
 
 data countryEU;
 set country;
@@ -19,10 +19,27 @@ EU = 'Non EU';
 end;
 run;
 
+proc sql;
+create table MOPER_ALL_DATA_2016_EE_b
+as
+select t1.*, t2.memberofEU
+from MOPER_ALL_DATA_2016_EE as t1 left join countryEU as t2 on (t1.origcountry = t2.termcode);
+quit;
+
+data MOPER_ALL_DATA_2016_EE_c;
+set MOPER_ALL_DATA_2016_EE_b;
+if memberofEU ^=. then do;
+EU = 1;
+end;
+else do;
+EU = 0;
+end;
+run;
 
 
+/*
 proc contents data=distinct_terms; run;
-
+*/
 
 /* creazione dei formati */
 
@@ -103,7 +120,7 @@ run;
 
 
 data MOPER_ALL_DATA_2016_EE_1;
-set MOPER_ALL_DATA_2016_EE /*prova_formati_1*/;
+set MOPER_ALL_DATA_2016_EE_c /*prova_formati_1*/;
 format paramcode $PARAMN.;
 format lang $LANGN.;
 format sampcountry $COUNTRYN.;
@@ -177,6 +194,9 @@ end;
 format origcountry2 $EUN.;
 origcountry2 = origcountry;
 
+format labcount 10. ;
+labcount = 1;
+
 run;
 
 proc sql;
@@ -209,7 +229,7 @@ column paramcode prodcode   resloq, mean ;
 define paramcode/across;
 define prodcode/group;
 define resloq/analysis;
-run;*/
+run;
 
 
 
@@ -229,14 +249,14 @@ column   prodcode  origcountry resval reslegallimit;
 define prodcode/group;
 define origcountry/group;
 
-define resval/analysis mean format=6.4 /*style= {background=cback.}*/;
+define resval/analysis mean format=6.4 style= {background=cback.};
 define reslegallimit/analysis mean format=6.4;
 run;
 
 
  ods listing close;
  ods html style=default;
-
+*/
 
 
 proc format;
@@ -264,43 +284,110 @@ run;
 
 title "Sample origin: n samples EU/non EU by country of origin";
 
-proc report data=MOPER_ALL_DATA_2016_EE_5;
-column  origcountry origcountry2   ;
-define origcountry/group;
-define origcountry2/"N_samples" across;
-define n/"n_samples" format=10.;
+/* prepare summary table */
 
-rbreak after / summarize;
+proc sql;
+create table summary_EUsamples
+as
+select distinct origcountry, 
+EU, 
+count(distinct(labsampcode)) as N_samples, 
+count(distinct(resultcode)) as N_results
+from MOPER_ALL_DATA_2016_EE_5
+group by origcountry, EU;
+quit;
+
+proc format;
+ value EUN
+0 = 'Not EU'
+1 = 'EU'
 ;
+run;
 
-title "Sample origin: n samples EU/non EU by food group";
+title2 "Non-EU Countries";
 
-proc report data=MOPER_ALL_DATA_2016_EE_5;
-column  Matrix_L1  origcountry2   ;
+proc report data=summary_EUsamples;
+column  /**/origcountry   N_samples N_results /*N_results*/ ;
+/**/define origcountry/"Country of origin" group;
+define N_samples/sum  "n_samples" format=10.;
+define N_results/sum  "n_results" format=10.;
+
+where EU = 0;
+rbreak after/ summarize;
+quit;
+
+title2 "EU Countries";
+
+proc report data=summary_EUsamples;
+column  /**/origcountry   N_samples N_results /*N_results*/ ;
+/**/define origcountry/"Country of origin" group;
+define N_samples/sum  "n_samples" format=10.;
+define N_results/sum  "n_results" format=10.;
+
+where EU = 1;
+rbreak after/ summarize;
+quit;
+
+
+
+title "Sample origin: n samples by food group";
+
+/* prepare summary table */
+proc sql;
+create table summary_Food_samples
+as
+select distinct Matrix_L1, /*
+EU, */
+count(distinct(labsampcode)) as N_samples, 
+count(distinct(resultcode)) as N_results
+from MOPER_ALL_DATA_2016_EE_5
+group by Matrix_L1/*, EU*/;
+quit;
+
+
+proc report data=summary_Food_samples;
+column  Matrix_L1    N_samples N_results ;
 define Matrix_L1/group;
-define origcountry2/"N_samples" across;
-define n/"n_samples" format=10.;
+define N_samples/sum  "n_samples" format=10.;
+define N_results/sum  "n_results" format=10.;
 
 rbreak after / summarize;
 ;
-
 
 /*
 where restype = "VAL";*/
 run;
 
+
+
 /* 02 _____ n samples by food groups */
 
-title1 "Sampling programme" ;
-title2 "N. samples by food group for different programme type" ;
 
-proc report data=MOPER_ALL_DATA_2016_EE_5;
-column  Matrix_L1 Matrix_L2 prodcode progtype n ;
+/* prepare summary table */
+proc sql;
+create table summary_Prog_samples
+as
+select distinct progtype, Matrix_L1, Matrix_L2, prodcode,/*
+EU, */
+count(distinct(labsampcode)) as N_samples, 
+count(distinct(resultcode)) as N_results
+from MOPER_ALL_DATA_2016_EE_5
+group by progtype, Matrix_L1, Matrix_L2, prodcode/*, EU*/;
+quit;
+
+
+title1 "Sampling programme" ;
+title2 "N. samples by food group in different programme types" ;
+title3 "Official (National) programme";
+proc report data=summary_Prog_samples;
+column  Matrix_L1 Matrix_L2 prodcode  N_samples N_results;
 define progtype/across;
 define Matrix_L1/group;
 define Matrix_L2/group;
 define prodcode/group;
-define n/"n_samples" format=10.;
+define N_samples/sum  "n_samples" format=10.;
+define N_results/sum  "n_results" format=10.;
+where progtype = 'K005A';  
 rbreak after / summarize;
 ;
 
@@ -308,12 +395,40 @@ rbreak after / summarize;
 where restype = "VAL";*/
 run;
 
+
+title3 "Official (National and EU) programme";
+proc report data=summary_Prog_samples;
+column  Matrix_L1 Matrix_L2 prodcode  N_samples N_results;
+define progtype/across;
+define Matrix_L1/group;
+define Matrix_L2/group;
+define prodcode/group;
+define N_samples/sum  "n_samples" format=10.;
+define N_results/sum  "n_results" format=10.;
+where progtype = 'K018A';  
+rbreak after / summarize;
+;
+
+/*
+where restype = "VAL";*/
+run;
+
+
+
 title "N. samples by food group" ;
+
+proc sql;
+create table BChart_Food_samples
+
+as 
+select distinct labsampcode, Matrix_L1
+from MOPER_ALL_DATA_2016_EE_5;
+quit;
 
 PROC SQL;
 	CREATE VIEW WORK.SORTTempTableSorted AS
 		SELECT T.Matrix_L1
-	FROM WORK.MOPER_ALL_DATA_2016_EE_5 as T
+	FROM WORK.BChart_Food_samples as T
 ;
 QUIT;
 
@@ -362,6 +477,13 @@ run;
 
 title "Frequency of pesticides detected / Frequency of pesticides exceeding the legal limit (MRL) - (EU-Coordinated Programme)";
 
+/*
+"IF (progLegalRef = ""N027A"" AND progSampStrategy IN (""ST10A"",""ST20A"") AND progType IN (""K009A"",""K018A"") AND ((prodCode, recodedTreat, reportName) IN EUCPList) AND (tableACompliant=1 OR tableBabyFoodCompliant=1)) THEN EUCPflag=1
+ELSE EUCPflag=0;"
+
+*/
+
+
 
 proc sql;
 create table MOPER_ALL_DATA_2016_EE_6
@@ -373,7 +495,7 @@ quit;
 
 data MOPER_ALL_DATA_2016_EE_7 (drop= matrix matrix_code);
 set MOPER_ALL_DATA_2016_EE_6;
-if matrix_code ^="" then do;
+if matrix_code ^=""  and proglegalref ="N027A" and progsampstrategy in ("ST10A","ST20A") and progType in ("K009A","K018A") then do;
 EUCP = 1;
 end;
 else do;
@@ -437,4 +559,5 @@ define Ex_rate/display "Exceedance rate (%)";
 
 where /*Ex_rate > 0 or*/ Quant_rate >0;
 run;
+
 
