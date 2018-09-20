@@ -1,0 +1,5 @@
+/*
+"IF (progLegalRef = ""N027A"" AND progSampStrategy IN (""ST10A"",""ST20A"") AND progType IN (""K009A"",""K018A"") AND ((prodCode, recodedTreat, reportName) IN EUCPList) AND (tableACompliant=1 OR tableBabyFoodCompliant=1)) THEN EUCPflag=1
+ELSE EUCPflag=0;"
+
+*/
