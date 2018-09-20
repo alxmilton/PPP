@@ -8,47 +8,6 @@ select *
 from test.prova_formati_1;
 quit;
 
-PROC SQL;
-   CREATE TABLE WORK.distinct_terms AS 
-   SELECT DISTINCT t1.SAMPAREA, 
-          t1.ORIGFISHAREATEXT, 
-          t1.PROCAREA, 
-          t1.EFSAPRODCODE, 
-          t1.PRODPRODMETH, 
-          t1.PRODPACK, 
-          t1.PRODTREAT, 
-          t1.PRODBRANDNAME, 
-          t1.PRODMANUF, 
-          t1.PRODINGRED, 
-          t1.PRODCOM, 
-          t1.PROGCODE, 
-          t1.PROGLEGALREF, 
-          t1.PROGSAMPSTRATEGY, 
-          t1.PROGTYPE, 
-          t1.SAMPMETHOD, 
-          t1.SAMPPOINT, 
-          t1.ANMETHREFCODE, 
-          t1.ANMETHCODE, 
-          t1.ANMETHTEXT, 
-          t1.RESVALREC, 
-          t1.RESVALUNCERTSD, 
-          t1.RESVALUNCERT, 
-          t1.MOISTPERC, 
-          t1.FATPERC, 
-          t1.RESCOMM, 
-          t1.ACTTAKENCODE, 
-          t1.LANG, 
-          t1.LABACCRED, 
-          t1.ACCREDPROC, 
-          t1.RESUNIT, 
-          t1.RESVALRECCORR, 
-          t1.EXPRRES, 
-          t1.RESTYPE, 
-          t1.RESLEGALLIMITTYPE, 
-          t1.RESEVALUATION
-      FROM WORK.MOPER_ALL_DATA_2016_EE t1;
-QUIT;
-
 data countryEU;
 set country;
 format EU $10.;
@@ -144,7 +103,7 @@ run;
 
 
 data prova_formati_2;
-set prova_formati_1;
+set MOPER_ALL_DATA_2016_EE /*prova_formati_1*/;
 format paramcode $PARAMN.;
 format lang $LANGN.;
 format sampcountry $COUNTRYN.;
@@ -303,7 +262,9 @@ run;
 
 /* 01 _____ n samples EU/non EU */
 
-proc report data=prova_formati_3;
+title "Sample origin: n samples EU/non EU by country of origin";
+
+proc report data=prova_formati_6;
 column  origcountry origcountry2   ;
 define origcountry/group;
 define origcountry2/"N_samples" across;
@@ -312,11 +273,27 @@ define n/"n_samples" format=10.;
 rbreak after / summarize;
 ;
 
+title "Sample origin: n samples EU/non EU by food group";
+
+proc report data=prova_formati_6;
+column  Matrix_L1  origcountry2   ;
+define Matrix_L1/group;
+define origcountry2/"N_samples" across;
+define n/"n_samples" format=10.;
+
+rbreak after / summarize;
+;
+
+
 /*
 where restype = "VAL";*/
 run;
 
 /* 02 _____ n samples by food groups */
+
+title1 "Sampling programme" ;
+title2 "N. samples by food group for different programme type" ;
+
 proc report data=prova_formati_6;
 column  Matrix_L1 Matrix_L2 prodcode progtype n ;
 define progtype/across;
@@ -331,6 +308,7 @@ rbreak after / summarize;
 where restype = "VAL";*/
 run;
 
+title "N. samples by food group" ;
 
 PROC SQL;
 	CREATE VIEW WORK.SORTTempTableSorted AS
@@ -378,44 +356,84 @@ where score ^="below LOQ";
 
 run;
 
-/* 04 _____  */
+/* 04 _____  Frequency of pesticides detected / Frequency of pesticides exceeding the legal limit (MRL) - (EU-Coordinated Programme)*/
 
 /* prepare summary table */
 
+title "Frequency of pesticides detected / Frequency of pesticides exceeding the legal limit (MRL) - (EU-Coordinated Programme)";
+
+
 proc sql;
-create table summary
+create table prova_formati_7
 as
-select distinct paramcode,
-prodcode,
-sum(detected) format 10.2 as DET ,
+select t1.*, t2.*
+from prova_formati_6 as t1 left join EUCP_samples as t2 on (t1.prodcode = t2.matrix_code);
+quit;
+
+
+data prova_formati_8 (drop= matrix matrix_code);
+set prova_formati_7;
+if matrix_code ^="" then do;
+EUCP = 1;
+end;
+else do;
+EUCP = 0;
+end;
+run;
+
+
+
+proc sql;
+create table summary_EUCP
+as
+select distinct paramcode,Matrix_L1,Matrix_L2,
+prodcode, EUCP,
+sum(detected) format 10.2 as TOT ,
 sum(belowLOQ) format 10.2 as ltLOQ,
 sum(betweenLOQandMRL) format 10.2 as btwLOQMRL,
 sum(aboveMRL) format 10.2 as gtMRL
-from prova_formati_6
-group by paramcode, prodcode;
+from prova_formati_8
+where EUCP = 1
+group by paramcode, Matrix_L1,Matrix_L2, prodcode
+;
 quit;
 
-data summary_2;
-set summary;
-Format Det_rate percent10.2;
-Format EX_Rate percent10.2;
+data summary_EUCP_2;
+set summary_EUCP;
+Format Tot_rate percent10.2;
+Format Quant_Rate percent10.2;
+Format Ex_Rate percent10.2;
 
-Det_rate = DET/sum(ltLOQ,btwLOQMRL,gtMRL);
-EX_Rate = gtMRL/DET;
+
+Tot_rate = TOT/sum(ltLOQ,btwLOQMRL,gtMRL);
+Quant_Rate = sum(btwLOQMRL,gtMRL)/TOT;
+EX_Rate = gtMRL/TOT;
+
 
 run;
 
-proc report data=prova_formati_6;
-column    paramcode prodcode detected belowLOQ betweenLOQandMRL aboveMRL Det_Rate;
+
+data summary_EUCP_3;
+set summary_EUCP_2;/*
+if Quant_Rate > 0.001;*/
+ 
+run;
+
+proc sort data=summary_EUCP_3;
+by descending Quant_Rate ;
+run;
+
+
+
+proc report data=summary_EUCP_3;
+column    paramcode prodcode  Tot  Quant_rate Ex_rate;
 define paramcode/display "Residue" ;
 define prodcode/display "Food group" ;
 
-define detected/analysis sum ;
-define belowLOQ/analysis sum ;
-define betweenLOQandMRL/analysis sum ;
-define aboveMRL/analysis sum ;
-define Det_Rate/computed format=percent10.2;
-compute Det_Rate;
-Det_Rate = detected/sum(belowLOQ,betweenLOQandMRS,aboveMRL)*100;
-endcomp;
+define Tot/display "Total N. Samples" format=10.;
+define Quant_rate/display "Detection rate (%)";
+define Ex_rate/display "Exceedance rate (%)";
+
+
+where /*Ex_rate > 0 or*/ Quant_rate >0;
 run;
