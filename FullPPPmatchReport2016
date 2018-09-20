@@ -1,3 +1,4 @@
+
 LIBNAME test "\\efsa.eu.int\Fileserver\SASOperational\DataShare\AdHocProjects\2013\Personal Projects\CARLETTI\test";
 
 /*
@@ -152,10 +153,18 @@ run;
 data MOPER_ALL_DATA_2016_EE_2;
 set MOPER_ALL_DATA_2016_EE_1;
 format score $30.;
+
 if restype ^= "LOD" then do;
 detected = 1;
 end;
 else do detected = 0;
+end;
+
+
+if restype not in ("LOD", "LOQ") then do;
+quantified = 1;
+end;
+else do quantified = 0;
 end;
 
 if resval<resloq then do;
@@ -559,5 +568,75 @@ define Ex_rate/display "Exceedance rate (%)";
 
 where /*Ex_rate > 0 or*/ Quant_rate >0;
 run;
+
+
+title "N. different residues by Food group";
+
+proc sql;
+create table N_res_BY_FoodGroup
+as
+select  distinct
+	Matrix_L1, 
+	Matrix_L2, 
+	prodcode,
+	count(distinct(paramcode)) as n_residues
+
+from MOPER_ALL_DATA_2016_EE_7
+where quantified = 1
+group by prodcode;
+quit;
+
+
+proc sql;
+create table pippo
+as
+select distinct sum(quantified) as N_detected_residues,
+labsampcode, 
+prodcode
+from MOPER_ALL_DATA_2016_EE_7
+group by labsampcode, prodcode;
+quit;
+
+proc sql;
+create table pippo_2
+as
+select distinct count(labsampcode) as n_sampBY,
+N_detected_residues,
+prodcode
+from pippo
+group by N_detected_residues, prodcode
+;
+quit;
+
+proc sort data=pippo_2;
+by N_detected_residues;
+run;
+
+/*
+proc report data=pippo_2;
+columns n_sampBY N_detected_residues prodcode;
+define prodcode/group;
+define N_detected_residues/across;
+define n_sampBY/max;
+run;*/
+
+PROC SORT
+	DATA=WORK.PIPPO_2(KEEP=n_sampBY N_detected_residues PRODCODE)
+	OUT=WORK.PIPPOSORTED
+	;
+	BY PRODCODE;
+RUN;
+PROC TRANSPOSE DATA=WORK.PIPPOSORTED
+	OUT=WORK.TRNSTransposed(LABEL="Transposed WORK.PIPPO_2")
+	PREFIX=N_
+	NAME=Source
+	LABEL=Label
+;
+	BY PRODCODE;
+	ID N_detected_residues;
+	VAR n_sampBY;
+RUN; 
+QUIT;
+
 
 
