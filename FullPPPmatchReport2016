@@ -20,6 +20,10 @@ EU = 'Non EU';
 end;
 run;
 
+data matrix1;
+set matrix;
+run;
+
 proc sql;
 create table MOPER_ALL_DATA_2016_EE_b
 as
@@ -586,9 +590,9 @@ where quantified = 1
 group by prodcode;
 quit;
 
-
+/* Number of residues detected by product */
 proc sql;
-create table pippo
+create table N_res_BY_Product
 as
 select distinct sum(quantified) as N_detected_residues,
 labsampcode, 
@@ -598,17 +602,17 @@ group by labsampcode, prodcode;
 quit;
 
 proc sql;
-create table pippo_2
+create table N_res_BY_Product_2
 as
 select distinct count(labsampcode) as n_sampBY,
 N_detected_residues,
 prodcode
-from pippo
+from N_res_BY_Product
 group by N_detected_residues, prodcode
 ;
 quit;
 
-proc sort data=pippo_2;
+proc sort data=N_res_BY_Product_2;
 by N_detected_residues;
 run;
 
@@ -621,13 +625,13 @@ define n_sampBY/max;
 run;*/
 
 PROC SORT
-	DATA=WORK.PIPPO_2(KEEP=n_sampBY N_detected_residues PRODCODE)
-	OUT=WORK.PIPPOSORTED
+	DATA=WORK.N_res_BY_Product_2(KEEP=n_sampBY N_detected_residues PRODCODE)
+	OUT=WORK.RbyP_SORTED
 	;
 	BY PRODCODE;
 RUN;
-PROC TRANSPOSE DATA=WORK.PIPPOSORTED
-	OUT=WORK.TRNSTransposed(LABEL="Transposed WORK.PIPPO_2")
+PROC TRANSPOSE DATA=WORK.RbyP_SORTED
+	OUT=WORK.RbyP_TR (LABEL="Transposed WORK.RbyP_SORTED")
 	PREFIX=N_
 	NAME=Source
 	LABEL=Label
@@ -638,5 +642,34 @@ PROC TRANSPOSE DATA=WORK.PIPPOSORTED
 RUN; 
 QUIT;
 
+data RbyP_TR_2 (drop=Source);
+retain prodcode N_0 N_1 N_2 N_3 N_4 N_5 N_6 N_7 N_8 N_9 /*N_10 N_11*/ N_12;
+set RbyP_TR;
+run;
+
+title "Number of residues detected by product ";
 
 
+proc report data=RbyP_TR;
+columns prodcode N_0 N_1 N_2 N_3 N_4 N_5 N_6 N_7 N_8 N_9 /*N_10 N_11*/ N_12;
+define prodcode/group "Food product";
+rbreak after/summarize;
+run;
+
+/* Number of real Non Compliant vs justified ones*/
+
+proc sql;
+create table summary_NONCOMP
+as
+select * 
+from MOPER_ALL_DATA_2016_EE_7
+where aboveMRL = 1;
+quit;
+
+proc report data=summary_NONCOMP;
+columns Matrix_L1 resevaluation aboveMRL;
+define Matrix_L1/group "Food group";
+define resevaluation/across "Evaluation of result";
+define aboveMRL/sum "> MRL (total)";
+rbreak after /summarize ;
+run;
