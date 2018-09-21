@@ -1,0 +1,285 @@
+/* DATA QUALITY ??? */
+
+
+
+/* KPI_PPP_03: identify possible duplicates */
+/********** NOT FOR THE MOMENT **************/
+
+sysecho "Duplicate detection";
+
+proc sql;
+create table PPP_DATA_dups
+as select LABSAMPcode, PARAMCODE, labsubsampcode
+from MOPER_ALL_DATA_2016_EE_7;
+quit;
+
+PROC SORT DATA = PPP_DATA_dups NODUPKEY DUPOUT= dups;
+BY LABSAMPcode PARAMCODE labsubsampcode/**/;
+RUN;
+
+data dups2;
+set dups;
+dup_key_id = cats(LABSAMPcode, PARAMCODE, labsubsampcode);
+run;
+
+data PPP_DATA_5;
+set MOPER_ALL_DATA_2016_EE_7;
+dup_key_id = cats(LABSAMPcode, PARAMCODE, labsubsampcode);
+run;
+
+proc sql;
+
+create table PPP_DATA_6
+as
+select t1.*, t2.labsampcode as duplicate
+from PPP_DATA_5 t1 left join dups2 t2 on (t1.dup_key_id = t2.dup_key_id);
+quit;
+
+
+
+
+/*  KPI_PPP_08 CORRECT PRODUCT TREATMENT */
+
+
+data PPP_DATA_7;
+set PPP_DATA_6;
+if  prodTreat in ("T100A",
+"T101A", 
+"T102A", 
+"T103A", 
+"T104A",
+"T110A", 
+"T111A", 
+"T112A", 
+"T113A", 
+"T114A", 
+"T116A", 
+"T120A", 
+"T121A", 
+"T122A",
+"T123A",  
+"T124A", 
+"T125A", 
+"T128A ",
+"T129A ",
+"T130A ",
+"T131A",
+"T132A",
+"T134A",
+"T136A",
+"T148A",
+"T150A",
+"T152A",
+"T153A",
+"T154A",
+"T155A",
+"T999A",
+"T998A")
+then do KPI_PPP_08 = 1;
+end;
+else do KPI_PPP_08 = 0;
+end;
+run;
+
+
+
+/*  KPI_PPP_09 CORRECT TYPE OF LEGAL Limit */
+
+
+
+data PPP_DATA_8 ;
+set PPP_DATA_7;
+if reslegallimit ^=. then do;
+	if reslegallimittype in ("W002A","W990A")
+	then do KPI_PPP_09 = 1;
+	end;
+	else do KPI_PPP_09 = 0;
+	end;
+end;
+else do KPI_PPP_09 = 1;
+end;
+run;
+
+
+/*  KPI_PPP_10 result type consistent with numerical values */
+
+data PPP_DATA_9;
+set PPP_DATA_8;
+if restype =  'LOQ' then do;
+	if resloq >= resval then do;
+	KPI_PPP_10 = 1;
+	end;
+	else do;
+	KPI_PPP_10 = 0;
+	end;
+end;
+if restype =  'VAL' then do;
+	if resval >= resloq then do;
+	KPI_PPP_10 = 1;
+	end;
+	else do;
+	KPI_PPP_10 = 0;
+	end;
+end;
+else do KPI_PPP_10 = 1;
+end;
+
+run;
+
+
+/*  KPI_PPP_11 consistent evaluation of the results */
+
+data PPP_DATA_10;
+set PPP_DATA_9;
+
+if reslegallimittype = "W002A" and paramType ^= "P002A" and resVal >= resLegalLimit and resval ^=. and reslegallimit ^=. then do;
+if resEvaluation ^="J029A" then do;
+KPI_PPP_11 = 1;
+end;
+else do;
+KPI_PPP_11 = 0;
+end;
+end;
+else do KPI_PPP_11 = 1;
+end; 
+run;
+
+
+/*  KPI_PPP_12 no unspecific reporting in prodcode */
+
+data PPP_DATA_11 ;
+set PPP_DATA_10;
+/* the following prodcode must be verified by data steward, maybe other to be included, or not */
+if prodcode not in ("XXXXXXA", "P0500990A", "P1017000A",  "P1017000A"  ) then do;
+KPI_PPP_12 = 1;
+end;
+else do;
+KPI_PPP_12 = 0;
+end;
+
+run;
+
+/*  KPI_PPP_13 resvaluerecovery */
+
+data PPP_DATA_12 ;
+set PPP_DATA_11;
+
+
+if resvalreccorr = "Y" then do;
+	if resvalrec ^=. then do;
+	KPI_PPP_13 = 1;
+	end;
+	else do;
+	KPI_PPP_13 = 0;
+	end;
+end;
+else do;
+KPI_PPP_13 = 1;
+end;
+
+run;
+
+
+
+/*  KPI_PPP_14  acttakencode */
+
+data PPP_DATA_13 ;
+set PPP_DATA_12;
+
+
+if resevaluation = "J003A" then do;
+	if acttakencode ^="" then do;
+	KPI_PPP_14 = 1;
+	end;
+	else do;
+	KPI_PPP_14 = 0;
+	end;
+end;
+else do;
+KPI_PPP_14 = 1;
+end;
+
+run;
+
+/*  KPI_PPP_15  fat percentage */
+
+data PPP_DATA_14 ;
+set PPP_DATA_13;
+
+
+if prodcode in ("P1020000A","P1020010A", "P1020020A", "P1020030A", "P1020040", "P1020990AA") and exprres = "B001A" and prodtreat in ("T150A", "T998A", "T999A") then do;
+	if fatperc ^=. then do;
+	KPI_PPP_15 = 1;
+	end;
+	else do;
+	KPI_PPP_15 = 0;
+	end;
+end;
+else do;
+KPI_PPP_15 = 1;
+end;
+
+run;
+
+
+/*  KPI_PPP_16  fat percentage 2 */
+
+
+
+data PPP_DATA_15 ;
+set PPP_DATA_14;
+
+
+if prodcode in ("P1030000A","P1030010A", "P1030020A", "P1030030A", "P1030040A", "P1030990A") and exprres = "B001A" and prodtreat in ("T150A", "T998A", "T999A") then do;
+	if fatperc ^=. then do;
+	KPI_PPP_16 = 1;
+	end;
+	else do;
+	KPI_PPP_16 = 0;
+	end;
+end;
+else do;
+KPI_PPP_16 = 1;
+end;
+
+run;
+
+
+
+data PPP_KPI_ALL (keep=prodcode paramcode 
+KPI_PPP_08
+KPI_PPP_09
+KPI_PPP_10
+KPI_PPP_11
+KPI_PPP_12
+KPI_PPP_13
+KPI_PPP_14
+KPI_PPP_15
+KPI_PPP_16
+
+);
+set PPP_DATA_15;
+
+run;
+
+proc sql;
+create table QUALITY_TABLE
+as
+select prodcode,paramcode,/* */
+
+sum(KPI_PPP_08)/count(KPI_PPP_08) format percent10.2 as R_KPI_PPP_08,
+sum(KPI_PPP_09)/count(KPI_PPP_09) format percent10.2 as R_KPI_PPP_09,
+sum(KPI_PPP_10)/count(KPI_PPP_10) format percent10.2 as R_KPI_PPP_10,
+sum(KPI_PPP_11)/count(KPI_PPP_11) format percent10.2 as R_KPI_PPP_11,
+sum(KPI_PPP_12)/count(KPI_PPP_12) format percent10.2 as R_KPI_PPP_12,
+sum(KPI_PPP_13)/count(KPI_PPP_13) format percent10.2 as R_KPI_PPP_13,
+sum(KPI_PPP_14)/count(KPI_PPP_14) format percent10.2 as R_KPI_PPP_14,
+sum(KPI_PPP_15)/count(KPI_PPP_15) format percent10.2 as R_KPI_PPP_15,
+sum(KPI_PPP_16)/count(KPI_PPP_16) format percent10.2 as R_KPI_PPP_16
+
+from PPP_KPI_ALL
+group by prodcode, paramcode/**/;
+quit;
+
+
+
