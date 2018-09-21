@@ -1,0 +1,12 @@
+/* BUSINESS RULES ??? */
+
+/* errors - blocking BRs */
+
+data MOPER_ALL_DATA_2016_EE_8;
+set MOPER_ALL_DATA_2016_EE_7;
+
+/*example template for BRs*/
+
+if prodTreat = T899A then do; PEST02 = 1; end; else do; PEST02 = 0; end;
+
+run;
