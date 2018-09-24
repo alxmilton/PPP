@@ -1,0 +1,13 @@
+
+/* PERCENTILES */
+
+proc means data=MOPER_ALL_DATA_2016_EE_7 n mean std min max p1 p5 p10 p25 median p75 p90 p95 p99;
+	var resloq;
+run;
+
+proc univariate data=MOPER_ALL_DATA_2016_EE_7 noprint;
+  var resloq;
+  output out=PCTL pctlpre=P_ pctlpts= 50, 75 to 100 by 2.5;
+run;
+proc print data=PCTL;
+run;
